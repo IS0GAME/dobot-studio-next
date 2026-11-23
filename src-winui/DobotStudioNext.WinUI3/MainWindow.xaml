@@ -1,0 +1,58 @@
+<Window
+    x:Class="DobotStudioNext.WinUI3.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:DobotStudioNext.WinUI3"
+    Title="Dobot Studio Next (WinUI 3 Native)">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Top TitleBar / Header -->
+        <Border Grid.Row="0" Height="48" Padding="16,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- App Title & Breadcrumb -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    <TextBlock Text="Dobot Studio Next" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+                    <TextBlock Text="/" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="BreadcrumbCurrentPage" Text="Motion Sequence" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Hardware Connection Status Pill -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Border Background="#1010B981" BorderBrush="#3010B981" BorderThickness="1" CornerRadius="12" Padding="10,4">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="#10B981"/>
+                            <TextBlock x:Name="HardwareStatusText" Text="Virtual Simulator (Ready)" FontSize="12" FontWeight="Medium" Foreground="#10B981"/>
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="ScanPortButton" Content="Scan Hardware" Click="OnScanPortClicked" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Body: NavigationRail + Content Frame -->
+        <NavigationView Grid.Row="1"
+                        x:Name="NavView"
+                        PaneDisplayMode="LeftCompact"
+                        CompactPaneLength="48"
+                        OpenPaneLength="180"
+                        IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="True"
+                        SelectionChanged="NavView_SelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Sequence (Excel)" Tag="sequence">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe Fluent Icons"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Variables" Tag="variables">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Frame x:Name="ContentFrame" Margin="12,8,12,12" />
+        </NavigationView>
+    </Grid>
+</Window>

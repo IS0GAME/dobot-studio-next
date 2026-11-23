@@ -1,4 +1,5 @@
 import React from 'react';
+import { Smartphone, ChevronRight, Activity } from 'lucide-react';
 
 interface TitleBarProps {
   mode: 'QuickTeach' | 'Studio';
@@ -16,56 +17,61 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onOpenPendant,
 }) => {
   return (
-    <div className="h-9 px-3 flex items-center justify-between text-xs select-none border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-md">
+    <header className="h-10 px-3.5 flex items-center justify-between text-xs select-none border-b border-white/10 bg-[#0f111a]/85 backdrop-blur-xl z-10 flex-shrink-0">
+      {/* PowerToys Breadcrumb Navigation */}
       <div className="flex items-center gap-2">
-        <div className="w-3.5 h-3.5 rounded-full bg-[var(--primary)] flex items-center justify-center text-[9px] font-bold text-[var(--primary-foreground)]">
-          D
-        </div>
-        <span className="font-semibold text-[var(--foreground)]">Dobot Studio</span>
-        <span className="text-[var(--muted-foreground)]">/</span>
-        <span className="text-[var(--muted-foreground)] truncate max-w-[200px]">{projectName}</span>
+        <span className="font-bold text-zinc-100 tracking-tight text-[13px] font-sans">
+          Dobot Studio
+        </span>
+        <ChevronRight size={13} className="text-zinc-500" />
+        <span className="font-mono text-zinc-300 truncate max-w-[240px] text-xs">
+          {projectName}
+        </span>
         {isVirtual && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-500 font-medium">
-            Virtual Simulator
-          </span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-semibold tracking-wide">
+            <Activity size={10} className="animate-pulse" />
+            <span>Virtual Twin</span>
+          </div>
         )}
       </div>
 
+      {/* Right Controls: Mode Switcher + PowerToys Wireless Pendant Trigger */}
       <div className="flex items-center gap-3">
-        {/* Mode Switcher */}
-        <div className="flex p-0.5 rounded-md border border-[var(--border)] bg-[var(--muted)]/30 text-[11px]">
+        {/* WinUI 3 Segmented Mode Switcher */}
+        <div className="flex p-0.5 rounded-lg border border-white/10 bg-black/40 text-[11px] shadow-inner">
           <button
             onClick={() => onModeChange('QuickTeach')}
-            className={`px-2.5 py-1 rounded transition-colors font-medium ${
+            className={`px-3 py-1 rounded-md transition-all font-semibold ${
               mode === 'QuickTeach'
-                ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
             }`}
           >
             QuickTeach
           </button>
           <button
             onClick={() => onModeChange('Studio')}
-            className={`px-2.5 py-1 rounded transition-colors font-medium ${
+            className={`px-3 py-1 rounded-md transition-all font-semibold ${
               mode === 'Studio'
-                ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
             }`}
           >
             Studio
           </button>
         </div>
 
-        {/* Mobile Pendant Button */}
+        {/* Wireless Teach Pendant Button (Clean Vector - NO EMOJI) */}
         <button
           onClick={onOpenPendant}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-[var(--border)] hover:bg-[var(--muted)] transition-colors text-xs font-medium"
-          title="Connect Wireless Mobile Teach Pendant"
+          className="group flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-xs font-semibold text-zinc-200 hover:text-white shadow-sm"
+          title="Connect Wireless Mobile Teach Pendant (QR Code & WebSocket)"
         >
-          <span>📱</span>
-          <span>Pendant</span>
+          <Smartphone size={14} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+          <span>Wireless Pendant</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
         </button>
       </div>
-    </div>
+    </header>
   );
 };

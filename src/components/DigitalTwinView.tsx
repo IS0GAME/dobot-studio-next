@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { EyeOff, Eye } from 'lucide-react';
 import { CartesianCoord, JointCoord } from '../types/robot';
 
 interface DigitalTwinViewProps {
@@ -197,14 +198,14 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
         </div>
       )}
 
-      {/* Hover-reveal Collapse Arrow Button */}
+      {/* Hover-reveal Collapse Button */}
       {!isOffloaded && onToggleOffload && (
         <button
           onClick={onToggleOffload}
-          className="absolute top-2 right-1 w-5 h-7 rounded-l bg-[var(--card)]/90 border border-r-0 border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] shadow-sm z-10"
-          title="Offload 3D Viewport to free 100% GPU VRAM"
+          className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center shadow-md z-10"
+          title="Suspend 3D Viewport to free 100% GPU VRAM"
         >
-          ◀
+          <EyeOff size={13} />
         </button>
       )}
 

@@ -1,14 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Play, Loader2, OctagonAlert, Plus, Download, Code } from 'lucide-react';
 import { TitleBar } from './components/TitleBar';
+import { NavigationRail } from './components/NavigationRail';
 import { DigitalTwinView } from './components/DigitalTwinView';
 import { JogPanel } from './components/JogPanel';
 import { WaypointList } from './components/WaypointList';
+import { PendantModal } from './components/PendantModal';
+import { SkeletonView } from './components/SkeletonView';
 import { VirtualDobotSimulator } from './simulator/virtualDobot';
 import { MobilePendantServer } from './server/pendantServer';
 import { DobotStorage } from './storage/dobotStorage';
 import { CartesianCoord, JointCoord, MotionStyle, ToolAction, Waypoint } from './types/robot';
 
 export const App: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeNav, setActiveNav] = useState<'teach' | 'draw' | 'script' | 'settings'>('teach');
+  const [isPendantOpen, setIsPendantOpen] = useState(false);
   const [mode, setMode] = useState<'QuickTeach' | 'Studio'>('QuickTeach');
   const [projectName, setProjectName] = useState('Pick and Place Demo.dobot.json');
   const [coords, setCoords] = useState<CartesianCoord>({ x: 230.0, y: 0.0, z: -10.0, r: 0.0 });
@@ -62,18 +69,30 @@ export const App: React.FC = () => {
       setJoints(data.joints);
     });
 
-    const server = new MobilePendantServer({ port: 9876, simulator: sim });
-    server.start();
-    pendantServerRef.current = server;
+    // In Bun/Node runtime environments (e.g. tests), start embedded pendant server
+    if (typeof window === 'undefined' && typeof Bun !== 'undefined') {
+      try {
+        const server = new MobilePendantServer({ port: 9876, simulator: sim });
+        server.start();
+        pendantServerRef.current = server;
+      } catch (_) {}
+    }
+
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
 
     return () => {
+      clearTimeout(timer);
       unsub();
       sim.destroy();
-      server.stop();
+      if (pendantServerRef.current) {
+        pendantServerRef.current.stop();
+      }
     };
   }, []);
 
-  // Keyboard Shortcuts: Space (Play), Esc (E-Stop), 1-5 (Step size)
+  // Keyboard Shortcuts: Space (Play), Esc (E-Stop)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -148,121 +167,149 @@ export const App: React.FC = () => {
     a.click();
   };
 
+  if (isLoading) {
+    return <SkeletonView />;
+  }
+
   return (
-    <div className="w-full h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] font-sans antialiased overflow-hidden">
-      {/* Fluent TitleBar */}
-      <TitleBar
-        mode={mode}
-        onModeChange={setMode}
-        projectName={projectName}
-        isVirtual={true}
-        onOpenPendant={() => window.open('http://127.0.0.1:9876/', '_blank')}
-      />
+    <div className="w-full h-screen flex bg-[#090b10] text-zinc-100 font-sans antialiased overflow-hidden select-none animate-fadeIn">
+      {/* PowerToys 48px NavigationRail */}
+      <NavigationRail activeTab={activeNav} onTabChange={setActiveNav} />
 
-      {/* Main Body */}
-      <div className="flex-1 flex overflow-hidden p-3 gap-3">
-        {/* Left Area: 3D Viewport + Waypoint List */}
-        <div className="flex-1 flex flex-col gap-3 min-w-0">
-          <DigitalTwinView
-            coords={coords}
-            joints={joints}
-            isOffloaded={is3DOffloaded}
-            onToggleOffload={() => setIs3DOffloaded(!is3DOffloaded)}
-          />
+      {/* Main Workspace Frame */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* PowerToys Breadcrumb Header TitleBar */}
+        <TitleBar
+          mode={mode}
+          onModeChange={setMode}
+          projectName={projectName}
+          isVirtual={true}
+          onOpenPendant={() => setIsPendantOpen(true)}
+        />
 
-          <WaypointList
-            waypoints={waypoints}
-            selectedIndex={activeWpIndex}
-            onSelect={(idx) => {
-              setActiveWpIndex(idx);
-              simulatorRef.current?.moveTo(waypoints[idx].coords, 'MOVJ', speedRatio);
-            }}
-            onDelete={(idx) => setWaypoints(waypoints.filter((_, i) => i !== idx))}
-            onMoveUp={(idx) => {
-              if (idx === 0) return;
-              const copy = [...waypoints];
-              const temp = copy[idx - 1];
-              copy[idx - 1] = copy[idx];
-              copy[idx] = temp;
-              setWaypoints(copy);
-            }}
-            onMoveDown={(idx) => {
-              if (idx === waypoints.length - 1) return;
-              const copy = [...waypoints];
-              const temp = copy[idx + 1];
-              copy[idx + 1] = copy[idx];
-              copy[idx] = temp;
-              setWaypoints(copy);
-            }}
-            onPauseTimeChange={(idx, time) => {
-              const copy = [...waypoints];
-              copy[idx].pauseTime = time;
-              setWaypoints(copy);
-            }}
-          />
-
-          {/* Bottom Action Command Bar */}
-          <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePlay}
-                disabled={isPlaying}
-                className="px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5 shadow-sm"
-              >
-                <span>{isPlaying ? '⏳' : '▶'}</span>
-                <span>Play</span>
-              </button>
-              <button
-                onClick={handleEmergencyStop}
-                className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs active:scale-95 transition-all"
-                title="Emergency Stop (Esc)"
-              >
-                🛑 E-STOP
-              </button>
+        {/* Content Canvas */}
+        <div className="flex-1 flex overflow-hidden p-3 gap-3">
+          {/* Central Workspace: 3D Twin Viewport + Motion Sequence List */}
+          <div className="flex-1 flex flex-col gap-3 min-w-0">
+            {/* 3D Digital Twin Viewport (Expanded 52% Height) */}
+            <div className="h-[52%] min-h-[240px] flex-shrink-0">
+              <DigitalTwinView
+                coords={coords}
+                joints={joints}
+                isOffloaded={is3DOffloaded}
+                onToggleOffload={() => setIs3DOffloaded(!is3DOffloaded)}
+              />
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleAddPoint}
-                className="px-3.5 py-2 rounded-lg border border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] font-semibold transition-all"
-              >
-                ＋ Add Point
-              </button>
-              <button
-                onClick={handleExportLegacy}
-                className="px-2.5 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] text-[var(--muted-foreground)] font-medium"
-                title="Export as Dobot Studio 1.9.4 .playback file"
-              >
-                Export .playback
-              </button>
-              <button
-                onClick={handleExportPython}
-                className="px-2.5 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] text-[var(--muted-foreground)] font-medium"
-                title="Export as standalone Python script"
-              >
-                Export .py
-              </button>
+            {/* Waypoint Sequence Cards */}
+            <WaypointList
+              waypoints={waypoints}
+              selectedIndex={activeWpIndex}
+              onSelect={(idx) => {
+                setActiveWpIndex(idx);
+                simulatorRef.current?.moveTo(waypoints[idx].coords, 'MOVJ', speedRatio);
+              }}
+              onDelete={(idx) => setWaypoints(waypoints.filter((_, i) => i !== idx))}
+              onMoveUp={(idx) => {
+                if (idx === 0) return;
+                const copy = [...waypoints];
+                const temp = copy[idx - 1];
+                copy[idx - 1] = copy[idx];
+                copy[idx] = temp;
+                setWaypoints(copy);
+              }}
+              onMoveDown={(idx) => {
+                if (idx === waypoints.length - 1) return;
+                const copy = [...waypoints];
+                const temp = copy[idx + 1];
+                copy[idx + 1] = copy[idx];
+                copy[idx] = temp;
+                setWaypoints(copy);
+              }}
+              onPauseTimeChange={(idx, time) => {
+                const copy = [...waypoints];
+                copy[idx].pauseTime = time;
+                setWaypoints(copy);
+              }}
+            />
+
+            {/* Bottom Command Bar (Zero Emojis, Pure Vector Lucide Icons) */}
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePlay}
+                  disabled={isPlaying}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold active:scale-95 transition-all flex items-center gap-2 shadow-md shadow-blue-500/20 disabled:opacity-50"
+                >
+                  {isPlaying ? (
+                    <Loader2 size={15} className="animate-spin text-white" />
+                  ) : (
+                    <Play size={15} className="fill-white" />
+                  )}
+                  <span>{isPlaying ? 'Running...' : 'Play Sequence'}</span>
+                </button>
+                <button
+                  onClick={handleEmergencyStop}
+                  className="px-3.5 py-2 rounded-xl bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs active:scale-95 transition-all flex items-center gap-1.5 shadow-md shadow-red-600/20"
+                  title="Emergency Stop (Esc)"
+                >
+                  <OctagonAlert size={15} />
+                  <span>E-STOP</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAddPoint}
+                  className="px-3.5 py-2 rounded-xl border border-blue-500/50 bg-blue-500/10 text-cyan-300 hover:bg-blue-600 hover:text-white font-semibold transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Plus size={14} />
+                  <span>Add Pose</span>
+                </button>
+                <button
+                  onClick={handleExportLegacy}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 font-medium transition-all flex items-center gap-1.5"
+                  title="Export as Dobot Studio 1.9.4 .playback file"
+                >
+                  <Download size={13} />
+                  <span>.playback</span>
+                </button>
+                <button
+                  onClick={handleExportPython}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 font-medium transition-all flex items-center gap-1.5"
+                  title="Export as standalone Python script"
+                >
+                  <Code size={13} />
+                  <span>.py</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Area: Comprehensive Jog Panel */}
-        <div className="flex flex-col gap-3">
-          <JogPanel
-            coords={coords}
-            joints={joints}
-            onJog={handleJog}
-            speedRatio={speedRatio}
-            accelRatio={accelRatio}
-            onSpeedChange={setSpeedRatio}
-            onAccelChange={setAccelRatio}
-            selectedToolAction={selectedToolAction}
-            onToolActionChange={setSelectedToolAction}
-            motionStyle={motionStyle}
-            onMotionStyleChange={setMotionStyle}
-          />
+          {/* Right Column: Jog & Kinematic Configuration Panel */}
+          <div className="flex flex-col gap-3 flex-shrink-0">
+            <JogPanel
+              coords={coords}
+              joints={joints}
+              onJog={handleJog}
+              speedRatio={speedRatio}
+              accelRatio={accelRatio}
+              onSpeedChange={setSpeedRatio}
+              onAccelChange={setAccelRatio}
+              selectedToolAction={selectedToolAction}
+              onToolActionChange={setSelectedToolAction}
+              motionStyle={motionStyle}
+              onMotionStyleChange={setMotionStyle}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Wireless Teach Pendant ContentDialog Modal */}
+      <PendantModal
+        isOpen={isPendantOpen}
+        onClose={() => setIsPendantOpen(false)}
+      />
     </div>
   );
 };
