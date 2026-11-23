@@ -1,0 +1,61 @@
+<UserControl
+    x:Class="DobotStudioNext.WinUI3.Controls.FormulaCellControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid VerticalAlignment="Center">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <TextBox x:Name="RawTextBox"
+                 Grid.Column="0"
+                 FontFamily="Cascadia Code, Consolas"
+                 FontSize="13"
+                 HorizontalAlignment="Stretch"
+                 VerticalAlignment="Center"
+                 GotFocus="OnGotFocus"
+                 LostFocus="OnLostFocus"
+                 KeyDown="OnKeyDown"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 Padding="4,2"/>
+
+        <TextBlock x:Name="PlainIntDisplay"
+                   Grid.Column="0"
+                   FontFamily="Cascadia Code, Consolas"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center"
+                   Margin="4,2"
+                   IsHitTestVisible="False"
+                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+        <Button x:Name="InspectorButton"
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Width="22" Height="22"
+                Padding="0" Margin="2,0"
+                Background="Transparent"
+                BorderThickness="0"
+                ToolTipService.ToolTip="Formula Inspector">
+            <FontIcon Glyph="&#xE946;" FontFamily="Segoe Fluent Icons" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            <Button.Flyout>
+                <Flyout Placement="BottomEdgeAlignedRight">
+                    <StackPanel Spacing="8" Width="220" Padding="4">
+                        <TextBlock Text="Formula Inspector" FontWeight="SemiBold" FontSize="13" />
+                        <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="4" Padding="8">
+                            <StackPanel Spacing="4">
+                                <TextBlock x:Name="FormulaExpressionText" Text="Formula: -" FontSize="12" FontFamily="Cascadia Code" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="FormulaResultText" Text="Plain Int: 0" FontWeight="Bold" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <ToggleSwitch x:Name="KeepLinkedSwitch" Header="Keep Linked" IsOn="True" Toggled="OnKeepLinkedToggled" />
+                        <Button Content="Bake to Static Int" HorizontalAlignment="Stretch" Click="OnBakeClicked" />
+                    </StackPanel>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+    </Grid>
+</UserControl>

@@ -8,3 +8,8 @@ extracted_pyc/
 *.log
 *.exe
 *.dll
+[Bb]in/
+[Oo]bj/
+publish/
+*.pdb
+

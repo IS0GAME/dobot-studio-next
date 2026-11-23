@@ -38,8 +38,8 @@
 | WINUI3-02 | Implement FormulaEngine with Plain Int Conversion | Completed | Recursive descent parser with BODMAS and plain int conversion (5 tests pass) |
 | WINUI3-03 | Implement DobotSerialDriver & Virtual Simulator in C# | Completed | 0xAA protocol packet generator/parser, checksum, virtual simulator (8 tests pass) |
 | WINUI3-04 | Implement MotionSequence & Excel TSV Clipboard Interop | Completed | MotionPoint formula binding, TSV copy/paste, .dobot.json & .playback XML (12 tests pass) |
-| WINUI3-05 | Create WinUI 3 Unpackaged Desktop App Shell | In Progress | Setting up Windows App SDK unpackaged project with Mica Alt |
-| WINUI3-06 | Implement Dedicated Variables Manager Page | Pending | Page to add, edit, delete parametric variables with reactive updates |
-| WINUI3-07 | Implement Excel DataGrid with Formula Inspector | Pending | Spreadsheet table, keyboard navigation (Tab/Enter), formula tooltip |
-| WINUI3-08 | Implement StepRunner Visual Debugger & Teach Shortcuts | Pending | F10 step next, F5 run, Esc E-STOP, Ctrl+T teach append/overwrite |
-| WINUI3-09 | End-to-End Build, Launch, and Visual Verification via Windows MCP | Pending | Publish standalone exe, launch via MCP, capture visual verification |
+| WINUI3-05 | Create WinUI 3 Unpackaged Desktop App Shell | Completed | Unpackaged WinUI 3 with Mica Alt backdrop, PowerToys NavigationRail, and TitleBar breadcrumb |
+| WINUI3-06 | Implement Dedicated Variables Manager Page | Completed | Dedicated VariablesPage.xaml with add/delete forms, grid presets, and reactive auto-recalculation |
+| WINUI3-07 | Implement Excel DataGrid with Formula Inspector | Completed | Spreadsheet DataGrid with FormulaCellControl displaying Plain Ints (200, 235), TSV clipboard, and flyout inspector |
+| WINUI3-08 | Implement StepRunner Visual Debugger & Teach Shortcuts | Completed | StepRunner state machine with row highlight cursor, F10 Step Next, F5 Run, Esc E-STOP, Ctrl+T Teach |
+| WINUI3-09 | End-to-End Build, Launch, and Visual Verification via Windows MCP | Completed | 16/16 tests pass; Standalone binary published (DobotStudioNext.WinUI3.exe, 272KB); Visual evidence captured via Windows MCP |

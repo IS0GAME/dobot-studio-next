@@ -89,6 +89,10 @@ namespace DobotStudioNext.WinUI3.Core
             return packet;
         }
 
+        public byte[] CreateEmergencyStopPacket() => CreateEStopPacket();
+
+        public string? AutoDetectDobotPort() => AutoDetectComPort();
+
         public byte ComputeChecksum(byte[] buffer, int offset, int length)
         {
             int sum = 0;
