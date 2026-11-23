@@ -1,13 +1,14 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.IO;
+using System.Net;
+using System.Text;
 using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
-using Microsoft.Web.WebView2.WinForms;
-using Microsoft.Web.WebView2.Core;
 
 namespace DobotStudioNext
 {
@@ -16,8 +17,31 @@ namespace DobotStudioNext
         [DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         public static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
-        [DllImport("dwmapi.dll")]
-        public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern bool BringWindowToTop(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern int GetWindowTextLength(IntPtr hWnd);
+
+        private static HttpListener staticListener;
+        private static Thread serverThread;
+        private static bool isServerRunning = false;
+        private static Process pendantProcess;
+        private static string distDirectory;
 
         [STAThread]
         static void Main()
@@ -25,16 +49,149 @@ namespace DobotStudioNext
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // 1. Show Minimalist Pop-and-Fade Splash Popup
-            using (var splash = new SplashPopup())
+            string rootDir = AppDomain.CurrentDomain.BaseDirectory;
+            distDirectory = Path.Combine(rootDir, "dist");
+            if (!Directory.Exists(distDirectory))
+            {
+                distDirectory = rootDir;
+            }
+
+            // 1. Start Embedded In-Process Static Server on Port 5173
+            StartEmbeddedServer();
+
+            // 2. Start Silent Mobile Pendant Service (Port 9876) if available
+            StartPendantService(rootDir);
+
+            // 3. Show Smooth Minimalist Splash Popup (White 'D' on Dark Blue Gradient)
+            ShowSplashPopup();
+
+            // 4. Launch Dedicated Native App Window (Edge App Mode) and keep server alive while window exists
+            LaunchAppWindow();
+        }
+
+        static void StartEmbeddedServer()
+        {
+            try
+            {
+                staticListener = new HttpListener();
+                staticListener.Prefixes.Add("http://127.0.0.1:5173/");
+                staticListener.Prefixes.Add("http://localhost:5173/");
+                staticListener.Start();
+                isServerRunning = true;
+
+                serverThread = new Thread(ServerWorker)
+                {
+                    IsBackground = true,
+                    Name = "DobotStaticHttpServer"
+                };
+                serverThread.Start();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("HttpListener: " + ex.Message);
+            }
+        }
+
+        static void ServerWorker()
+        {
+            while (isServerRunning && staticListener != null && staticListener.IsListening)
+            {
+                try
+                {
+                    var context = staticListener.GetContext();
+                    ThreadPool.QueueUserWorkItem((c) => HandleRequest((HttpListenerContext)c), context);
+                }
+                catch
+                {
+                    if (!isServerRunning) break;
+                }
+            }
+        }
+
+        static void HandleRequest(HttpListenerContext context)
+        {
+            try
+            {
+                string rawUrl = context.Request.Url.AbsolutePath;
+                string relPath = rawUrl.TrimStart('/');
+                if (string.IsNullOrEmpty(relPath)) relPath = "index.html";
+
+                string filePath = Path.Combine(distDirectory, relPath.Replace('/', Path.DirectorySeparatorChar));
+
+                // Fallback to index.html for client-side routing
+                if (!File.Exists(filePath))
+                {
+                    filePath = Path.Combine(distDirectory, "index.html");
+                }
+
+                if (File.Exists(filePath))
+                {
+                    byte[] bytes = File.ReadAllBytes(filePath);
+                    context.Response.ContentType = GetMimeType(Path.GetExtension(filePath));
+                    context.Response.ContentLength64 = bytes.Length;
+                    context.Response.StatusCode = 200;
+                    context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+                }
+                else
+                {
+                    context.Response.StatusCode = 404;
+                }
+            }
+            catch { }
+            finally
+            {
+                try { context.Response.OutputStream.Close(); } catch { }
+            }
+        }
+
+        static string GetMimeType(string ext)
+        {
+            switch (ext.ToLowerInvariant())
+            {
+                case ".html": case ".htm": return "text/html; charset=utf-8";
+                case ".js": case ".mjs": return "application/javascript; charset=utf-8";
+                case ".css": return "text/css; charset=utf-8";
+                case ".png": return "image/png";
+                case ".jpg": case ".jpeg": return "image/jpeg";
+                case ".svg": return "image/svg+xml";
+                case ".ico": return "image/x-icon";
+                case ".json": return "application/json";
+                case ".wasm": return "application/wasm";
+                default: return "application/octet-stream";
+            }
+        }
+
+        static void StartPendantService(string rootDir)
+        {
+            try
+            {
+                string bunPath = @"C:\Users\Administrator\AppData\Local\Microsoft\WinGet\Links\bun.exe";
+                if (!File.Exists(bunPath)) bunPath = "bun";
+
+                var psiPendant = new ProcessStartInfo
+                {
+                    FileName = bunPath,
+                    Arguments = "run src/server/pendantServer.ts",
+                    WorkingDirectory = rootDir,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                psiPendant.EnvironmentVariables["PATH"] = @"C:\Users\Administrator\AppData\Local\Microsoft\WinGet\Links;" + Environment.GetEnvironmentVariable("PATH");
+                pendantProcess = Process.Start(psiPendant);
+            }
+            catch { }
+        }
+
+        static void ShowSplashPopup()
+        {
+            using (var splash = new SplashForm())
             {
                 splash.Show();
-                splash.Refresh();
+                SetForegroundWindow(splash.Handle);
+                BringWindowToTop(splash.Handle);
 
-                // Start background silent service (Bun dev or preview on port 5173 with CreateNoWindow = true)
-                Process bgProcess = StartBackgroundService();
-
-                // Let splash display for 1.2s with smooth animation
+                // Wait 1.2 seconds for smooth brand popup display
                 var sw = Stopwatch.StartNew();
                 while (sw.ElapsedMilliseconds < 1200)
                 {
@@ -42,69 +199,132 @@ namespace DobotStudioNext
                     Thread.Sleep(15);
                 }
 
-                // Smooth fade-out (200ms)
-                for (double op = 1.0; op >= 0.0; op -= 0.1)
+                // Smooth 200ms fade-out
+                for (double op = 1.0; op >= 0.05; op -= 0.1)
                 {
                     splash.Opacity = op;
                     Application.DoEvents();
-                    Thread.Sleep(20);
+                    Thread.Sleep(15);
                 }
                 splash.Close();
-
-                // 2. Open Main Maximized Window with Edge WebView2
-                using (var mainForm = new MainWindow(bgProcess))
-                {
-                    Application.Run(mainForm);
-                }
             }
         }
 
-        static Process StartBackgroundService()
+        static IntPtr FindDobotWindow()
+        {
+            IntPtr found = IntPtr.Zero;
+            EnumWindows((hWnd, lParam) =>
+            {
+                int len = GetWindowTextLength(hWnd);
+                if (len > 0)
+                {
+                    StringBuilder sb = new StringBuilder(len + 1);
+                    GetWindowText(hWnd, sb, sb.Capacity);
+                    string title = sb.ToString();
+                    if (title.IndexOf("Dobot", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        title.IndexOf("5173", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        found = hWnd;
+                        return false; // stop enumeration
+                    }
+                }
+                return true;
+            }, IntPtr.Zero);
+            return found;
+        }
+
+        static void LaunchAppWindow()
         {
             try
             {
-                string rootDir = AppDomain.CurrentDomain.BaseDirectory;
-                string bunPath = @"C:\Users\Administrator\AppData\Local\Microsoft\WinGet\Links\bun.exe";
-                if (!File.Exists(bunPath)) bunPath = "bun";
+                string edgePath = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
+                if (!File.Exists(edgePath))
+                {
+                    edgePath = @"C:\Program Files\Microsoft\Edge\Application\msedge.exe";
+                }
+
+                string url = "http://127.0.0.1:5173/";
+                string userProfile = Path.Combine(Path.GetTempPath(), "DobotStudioAppProfile");
+                string args = string.Format("--app=\"{0}\" --user-data-dir=\"{1}\" --test-type --no-first-run --no-default-browser-check --start-maximized", url, userProfile);
 
                 var psi = new ProcessStartInfo
                 {
-                    FileName = bunPath,
-                    Arguments = "run dev",
-                    WorkingDirectory = rootDir,
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden
+                    FileName = edgePath,
+                    Arguments = args,
+                    UseShellExecute = false
                 };
-                psi.EnvironmentVariables["PATH"] = @"C:\Users\Administrator\AppData\Local\Microsoft\WinGet\Links;" + Environment.GetEnvironmentVariable("PATH");
 
-                return Process.Start(psi);
+                Process.Start(psi);
+
+                // Wait for the Edge app window to appear (matches "5173" or "Dobot")
+                IntPtr targetHwnd = IntPtr.Zero;
+                for (int i = 0; i < 60; i++)
+                {
+                    Thread.Sleep(200);
+                    targetHwnd = FindDobotWindow();
+                    if (targetHwnd != IntPtr.Zero) break;
+                }
+
+                if (targetHwnd != IntPtr.Zero)
+                {
+                    SetForegroundWindow(targetHwnd);
+                    BringWindowToTop(targetHwnd);
+
+                    while (IsWindow(targetHwnd))
+                    {
+                        Thread.Sleep(300);
+                    }
+                }
+                else
+                {
+                    // Fallback: stay alive so user can browse
+                    while (true)
+                    {
+                        Thread.Sleep(1000);
+                        targetHwnd = FindDobotWindow();
+                        if (targetHwnd != IntPtr.Zero)
+                        {
+                            while (IsWindow(targetHwnd)) Thread.Sleep(300);
+                            break;
+                        }
+                    }
+                }
             }
-            catch
+            finally
             {
-                return null;
+                CleanupServices();
             }
+        }
+
+        static void CleanupServices()
+        {
+            isServerRunning = false;
+            try { if (staticListener != null) staticListener.Stop(); } catch { }
+            try { if (pendantProcess != null && !pendantProcess.HasExited) pendantProcess.Kill(); } catch { }
         }
     }
 
-    public class SplashPopup : Form
+    /// <summary>
+    /// Smooth Minimalist Splash Popup with Rounded Corners and Crisp White 'D' on Dark Blue Gradient.
+    /// </summary>
+    public class SplashForm : Form
     {
         private Image iconImage;
         private int pulsePhase = 0;
         private System.Windows.Forms.Timer animTimer;
 
-        public SplashPopup()
+        public SplashForm()
         {
             this.FormBorderStyle = FormBorderStyle.None;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Size = new Size(460, 260);
-            this.BackColor = Color.FromArgb(15, 23, 42); // #0f172a
+            this.BackColor = Color.FromArgb(10, 25, 47); // Dark Midnight Blue #0a192f
             this.ShowInTaskbar = false;
             this.TopMost = true;
             this.DoubleBuffered = true;
 
-            // Rounded corners
-            this.Region = Region.FromHrgn(Program.CreateRoundRectRgn(0, 0, 460, 260, 24, 24));
+            // Rounded corners mask
+            this.Region = Region.FromHrgn(Program.CreateRoundRectRgn(0, 0, 461, 261, 28, 28));
 
             string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "icon.png");
             if (File.Exists(iconPath))
@@ -113,8 +333,12 @@ namespace DobotStudioNext
             }
 
             animTimer = new System.Windows.Forms.Timer();
-            animTimer.Interval = 30;
-            animTimer.Tick += (s, e) => { pulsePhase = (pulsePhase + 6) % 360; this.Invalidate(); };
+            animTimer.Interval = 25;
+            animTimer.Tick += (s, e) =>
+            {
+                pulsePhase = (pulsePhase + 6) % 360;
+                this.Invalidate();
+            };
             animTimer.Start();
         }
 
@@ -123,49 +347,83 @@ namespace DobotStudioNext
             base.OnPaint(e);
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-            // Draw Subtle Border
-            using (var borderPen = new Pen(Color.FromArgb(56, 189, 248), 1.5f))
+            using (var path = GetRoundRect(0, 0, this.Width - 1, this.Height - 1, 26))
             {
-                g.DrawRectangle(borderPen, 0, 0, 459, 259);
+                // 1. Dark Blue Gradient Background
+                using (var brush = new LinearGradientBrush(
+                    new Point(0, 0),
+                    new Point(this.Width, this.Height),
+                    Color.FromArgb(10, 25, 47),   // Deep Midnight Navy #0a192f
+                    Color.FromArgb(30, 58, 138)   // Rich Royal Blue #1e3a8a
+                ))
+                {
+                    ColorBlend cb = new ColorBlend(3);
+                    cb.Colors = new Color[] { Color.FromArgb(10, 25, 47), Color.FromArgb(15, 43, 92), Color.FromArgb(30, 58, 138) };
+                    cb.Positions = new float[] { 0.0f, 0.45f, 1.0f };
+                    brush.InterpolationColors = cb;
+                    g.FillPath(brush, path);
+                }
+
+                // 2. Subtle Cyan Border along the rounded path (Anti-aliased)
+                using (var borderPen = new Pen(Color.FromArgb(120, 56, 189, 248), 2.0f))
+                {
+                    g.DrawPath(borderPen, path);
+                }
             }
 
-            // Draw Minimalist Dobot Vector Icon
+            // 3. Crisp Minimalist White 'D' Logo
             if (iconImage != null)
             {
-                int iconSize = 96;
+                int iconSize = 88;
                 int iconX = (this.Width - iconSize) / 2;
-                int iconY = 35;
-                g.DrawImage(iconImage, iconX, iconY, iconSize, iconSize);
+                int iconY = 24;
+                g.DrawImage(iconImage, new Rectangle(iconX, iconY, iconSize, iconSize));
             }
 
-            // Draw Title Text
+            // 4. Clean Typographic Wordmark
             using (var fontTitle = new Font("Segoe UI", 16, FontStyle.Bold))
             using (var brushTitle = new SolidBrush(Color.FromArgb(248, 250, 252)))
             {
                 string title = "DOBOT STUDIO NEXT";
                 SizeF sz = g.MeasureString(title, fontTitle);
-                g.DrawString(title, fontTitle, brushTitle, (this.Width - sz.Width) / 2, 145);
+                g.DrawString(title, fontTitle, brushTitle, (this.Width - sz.Width) / 2, 126);
             }
 
-            // Draw Subtitle Text
             using (var fontSub = new Font("Segoe UI", 9, FontStyle.Regular))
             using (var brushSub = new SolidBrush(Color.FromArgb(148, 163, 184)))
             {
                 string sub = "Version 2.0.0 • High-Precision Robotics Suite";
                 SizeF sz = g.MeasureString(sub, fontSub);
-                g.DrawString(sub, fontSub, brushSub, (this.Width - sz.Width) / 2, 178);
+                g.DrawString(sub, fontSub, brushSub, (this.Width - sz.Width) / 2, 158);
             }
 
-            // Pulsing Cyan Status Aura Line
+            // 5. Pulsing Cyan Status Aura Line
             double sinVal = Math.Sin(pulsePhase * Math.PI / 180.0);
-            int alpha = (int)(140 + 100 * sinVal);
-            using (var pulseBrush = new SolidBrush(Color.FromArgb(alpha, 56, 189, 248)))
+            int pulseAlpha = (int)(130 + 110 * sinVal);
+            using (var pulseBrush = new SolidBrush(Color.FromArgb(pulseAlpha, 56, 189, 248)))
             {
                 int barW = 120;
                 int barX = (this.Width - barW) / 2;
-                g.FillRectangle(pulseBrush, barX, 218, barW, 3);
+                using (var barPath = GetRoundRect(barX, 204, barW, 3, 2))
+                {
+                    g.FillPath(pulseBrush, barPath);
+                }
             }
+        }
+
+        private GraphicsPath GetRoundRect(int x, int y, int w, int h, int r)
+        {
+            var path = new GraphicsPath();
+            path.AddArc(x, y, r * 2, r * 2, 180, 90);
+            path.AddArc(x + w - r * 2, y, r * 2, r * 2, 270, 90);
+            path.AddArc(x + w - r * 2, y + h - r * 2, r * 2, r * 2, 0, 90);
+            path.AddArc(x, y + h - r * 2, r * 2, r * 2, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         protected override void Dispose(bool disposing)
@@ -176,67 +434,6 @@ namespace DobotStudioNext
                 if (iconImage != null) iconImage.Dispose();
             }
             base.Dispose(disposing);
-        }
-    }
-
-    public class MainWindow : Form
-    {
-        private WebView2 webView;
-        private Process bgProcess;
-
-        public MainWindow(Process bgProc)
-        {
-            this.bgProcess = bgProc;
-            this.Text = "Dobot Studio Next-Gen";
-            this.WindowState = FormWindowState.Maximized;
-            this.BackColor = Color.FromArgb(10, 10, 15);
-
-            string icoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "app-icon.ico");
-            if (File.Exists(icoPath))
-            {
-                this.Icon = new Icon(icoPath);
-            }
-
-            // Enable Windows 11 Dark Mode Titlebar
-            int darkMode = 1;
-            Program.DwmSetWindowAttribute(this.Handle, 20, ref darkMode, sizeof(int)); // DWMWA_USE_IMMERSIVE_DARK_MODE
-
-            webView = new WebView2();
-            webView.Dock = DockStyle.Fill;
-            this.Controls.Add(webView);
-
-            InitializeWebView();
-        }
-
-        private async void InitializeWebView()
-        {
-            try
-            {
-                var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Path.GetTempPath(), "DobotStudioNext_WebView2"));
-                await webView.EnsureCoreWebView2Async(env);
-                webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-                webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
-
-                // Navigate to local application (which will immediately display the Fluent Skeleton Loading State)
-                webView.Source = new Uri("http://127.0.0.1:5173/");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("WebView2 Initialization Error: " + ex.Message);
-            }
-        }
-
-        protected override void OnFormClosing(FormClosingEventArgs e)
-        {
-            base.OnFormClosing(e);
-            if (bgProcess != null && !bgProcess.HasExited)
-            {
-                try
-                {
-                    bgProcess.Kill();
-                }
-                catch { }
-            }
         }
     }
 }

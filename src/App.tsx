@@ -64,9 +64,14 @@ export const App: React.FC = () => {
       setJoints(data.joints);
     });
 
-    const server = new MobilePendantServer({ port: 9876, simulator: sim });
-    server.start();
-    pendantServerRef.current = server;
+    // In Bun/Node runtime environments (e.g. tests), start embedded pendant server
+    if (typeof window === 'undefined' && typeof Bun !== 'undefined') {
+      try {
+        const server = new MobilePendantServer({ port: 9876, simulator: sim });
+        server.start();
+        pendantServerRef.current = server;
+      } catch (_) {}
+    }
 
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -76,7 +81,9 @@ export const App: React.FC = () => {
       clearTimeout(timer);
       unsub();
       sim.destroy();
-      server.stop();
+      if (pendantServerRef.current) {
+        pendantServerRef.current.stop();
+      }
     };
   }, []);
 
