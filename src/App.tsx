@@ -3,12 +3,14 @@ import { TitleBar } from './components/TitleBar';
 import { DigitalTwinView } from './components/DigitalTwinView';
 import { JogPanel } from './components/JogPanel';
 import { WaypointList } from './components/WaypointList';
+import { SkeletonView } from './components/SkeletonView';
 import { VirtualDobotSimulator } from './simulator/virtualDobot';
 import { MobilePendantServer } from './server/pendantServer';
 import { DobotStorage } from './storage/dobotStorage';
 import { CartesianCoord, JointCoord, MotionStyle, ToolAction, Waypoint } from './types/robot';
 
 export const App: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [mode, setMode] = useState<'QuickTeach' | 'Studio'>('QuickTeach');
   const [projectName, setProjectName] = useState('Pick and Place Demo.dobot.json');
   const [coords, setCoords] = useState<CartesianCoord>({ x: 230.0, y: 0.0, z: -10.0, r: 0.0 });
@@ -66,7 +68,12 @@ export const App: React.FC = () => {
     server.start();
     pendantServerRef.current = server;
 
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 600);
+
     return () => {
+      clearTimeout(timer);
       unsub();
       sim.destroy();
       server.stop();
@@ -148,8 +155,12 @@ export const App: React.FC = () => {
     a.click();
   };
 
+  if (isLoading) {
+    return <SkeletonView />;
+  }
+
   return (
-    <div className="w-full h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] font-sans antialiased overflow-hidden">
+    <div className="w-full h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] font-sans antialiased overflow-hidden animate-fadeIn">
       {/* Fluent TitleBar */}
       <TitleBar
         mode={mode}
