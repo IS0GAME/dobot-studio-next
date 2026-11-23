@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, X, Copy, Check, ExternalLink, Wifi } from 'lucide-react';
+import QRCode from 'qrcode';
+import { Smartphone, X, Copy, Check, ExternalLink, Wifi, RefreshCw, Globe } from 'lucide-react';
 
 interface PendantModalProps {
   isOpen: boolean;
@@ -13,15 +14,78 @@ export const PendantModal: React.FC<PendantModalProps> = ({
   port = 9876,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [hostUrl, setHostUrl] = useState(`http://127.0.0.1:${port}/`);
+  const [selectedIp, setSelectedIp] = useState('127.0.0.1');
+  const [availableIps, setAvailableIps] = useState<string[]>(['127.0.0.1']);
+  const [qrSvg, setQrSvg] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
+  const fullUrl = `http://${selectedIp}:${port}/`;
+
+  // Fetch true LAN IPv4 from local backend
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname || '127.0.0.1';
-      setHostUrl(`http://${hostname}:${port}/`);
+    let isMounted = true;
+    async function detectNetwork() {
+      try {
+        const res = await fetch('/api/network-info');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            const ips = (data.ips && data.ips.length > 0) ? data.ips : [];
+            const allIps = Array.from(new Set([...ips, '127.0.0.1']));
+            setAvailableIps(allIps);
+            if (data.defaultIp && data.defaultIp !== '127.0.0.1') {
+              setSelectedIp(data.defaultIp);
+            } else if (allIps.length > 0) {
+              setSelectedIp(allIps[0]);
+            }
+          }
+        }
+      } catch (_) {
+        // Fallback: check window.location.hostname
+        if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
+          if (isMounted) {
+            setSelectedIp(window.location.hostname);
+            setAvailableIps([window.location.hostname, '127.0.0.1']);
+          }
+        }
+      }
     }
-  }, [port]);
 
+    if (isOpen) {
+      detectNetwork();
+    }
+    return () => { isMounted = false; };
+  }, [isOpen, port]);
+
+  // Generate real, 100% compliant, scannable QR Code SVG
+  useEffect(() => {
+    let isMounted = true;
+    setIsGenerating(true);
+
+    QRCode.toString(fullUrl, {
+      type: 'svg',
+      margin: 1,
+      color: {
+        dark: '#090d16',
+        light: '#ffffff',
+      },
+      errorCorrectionLevel: 'M',
+    })
+      .then((svgString) => {
+        if (isMounted) {
+          setQrSvg(svgString);
+          setIsGenerating(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to generate real QR Code:', err);
+        if (isMounted) setIsGenerating(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [fullUrl]);
+
+  // Keyboard shortcut: Escape to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -36,29 +100,29 @@ export const PendantModal: React.FC<PendantModalProps> = ({
 
   const handleCopy = () => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(hostUrl);
+      navigator.clipboard.writeText(fullUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleOpenBrowser = () => {
-    window.open(hostUrl, '_blank');
+    window.open(fullUrl, '_blank');
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-fadeIn select-none"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="relative w-full max-w-md bg-[#13151f]/95 border border-white/10 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col p-6 text-zinc-100"
+        className="relative w-full max-w-md bg-[#11131c]/95 border border-white/10 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col p-6 text-zinc-100"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between pb-4 border-b border-white/5">
+        {/* Modal Header */}
+        <div className="flex items-start justify-between pb-3.5 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
               <Smartphone size={20} />
@@ -68,7 +132,7 @@ export const PendantModal: React.FC<PendantModalProps> = ({
                 Wireless Teach Pendant
               </h3>
               <p className="text-xs text-zinc-400">
-                Control Dobot Magician wirelessly from your smartphone
+                Scan with any smartphone camera to open Wireless Pendant PWA
               </p>
             </div>
           </div>
@@ -82,7 +146,7 @@ export const PendantModal: React.FC<PendantModalProps> = ({
         </div>
 
         {/* Server Status Pill */}
-        <div className="my-4 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/30 flex items-center justify-between text-xs text-emerald-400">
+        <div className="my-3.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/30 flex items-center justify-between text-xs text-emerald-400">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-medium">WebSocket Telemetry Active</span>
@@ -90,121 +154,80 @@ export const PendantModal: React.FC<PendantModalProps> = ({
           <span className="font-mono text-[11px] opacity-80">Port {port}</span>
         </div>
 
-        {/* Vector SVG QR Code Container */}
-        <div className="flex flex-col items-center justify-center py-2">
-          <div className="p-4 bg-white rounded-2xl shadow-inner border border-zinc-200">
-            {/* Crisp Vector SVG QR Matrix */}
-            <svg
-              viewBox="0 0 148 148"
-              width="160"
-              height="160"
-              className="block"
-              shapeRendering="crispEdges"
-            >
-              <rect width="148" height="148" fill="#ffffff" />
-              {/* Position Detection Patterns (Top-Left) */}
-              <rect x="12" y="12" width="28" height="28" fill="#0f172a" />
-              <rect x="16" y="16" width="20" height="20" fill="#ffffff" />
-              <rect x="20" y="20" width="12" height="12" fill="#0f172a" />
-
-              {/* Position Detection Patterns (Top-Right) */}
-              <rect x="108" y="12" width="28" height="28" fill="#0f172a" />
-              <rect x="112" y="16" width="20" height="20" fill="#ffffff" />
-              <rect x="116" y="20" width="12" height="12" fill="#0f172a" />
-
-              {/* Position Detection Patterns (Bottom-Left) */}
-              <rect x="12" y="108" width="28" height="28" fill="#0f172a" />
-              <rect x="16" y="112" width="20" height="20" fill="#ffffff" />
-              <rect x="20" y="116" width="12" height="12" fill="#0f172a" />
-
-              {/* Timing patterns & Alignment pattern */}
-              <rect x="44" y="24" width="4" height="4" fill="#0f172a" />
-              <rect x="52" y="24" width="4" height="4" fill="#0f172a" />
-              <rect x="60" y="24" width="4" height="4" fill="#0f172a" />
-              <rect x="68" y="24" width="4" height="4" fill="#0f172a" />
-              <rect x="76" y="24" width="4" height="4" fill="#0f172a" />
-              <rect x="84" y="24" width="4" height="4" fill="#0f172a" />
-              <rect x="92" y="24" width="4" height="4" fill="#0f172a" />
-              <rect x="100" y="24" width="4" height="4" fill="#0f172a" />
-
-              <rect x="24" y="44" width="4" height="4" fill="#0f172a" />
-              <rect x="24" y="52" width="4" height="4" fill="#0f172a" />
-              <rect x="24" y="60" width="4" height="4" fill="#0f172a" />
-              <rect x="24" y="68" width="4" height="4" fill="#0f172a" />
-              <rect x="24" y="76" width="4" height="4" fill="#0f172a" />
-              <rect x="24" y="84" width="4" height="4" fill="#0f172a" />
-              <rect x="24" y="92" width="4" height="4" fill="#0f172a" />
-              <rect x="24" y="100" width="4" height="4" fill="#0f172a" />
-
-              {/* Alignment Pattern Center */}
-              <rect x="92" y="92" width="20" height="20" fill="#0f172a" />
-              <rect x="96" y="96" width="12" height="12" fill="#ffffff" />
-              <rect x="100" y="100" width="4" height="4" fill="#0f172a" />
-
-              {/* Data Modules (Deterministic Encoding Matrix) */}
-              <rect x="48" y="48" width="8" height="4" fill="#0f172a" />
-              <rect x="64" y="48" width="4" height="8" fill="#0f172a" />
-              <rect x="76" y="48" width="12" height="4" fill="#0f172a" />
-              <rect x="48" y="60" width="12" height="4" fill="#0f172a" />
-              <rect x="68" y="60" width="8" height="4" fill="#0f172a" />
-              <rect x="84" y="60" width="4" height="8" fill="#0f172a" />
-              <rect x="48" y="72" width="4" height="12" fill="#0f172a" />
-              <rect x="60" y="72" width="8" height="8" fill="#0f172a" />
-              <rect x="76" y="72" width="4" height="12" fill="#0f172a" />
-              <rect x="88" y="72" width="12" height="4" fill="#0f172a" />
-              <rect x="48" y="92" width="8" height="8" fill="#0f172a" />
-              <rect x="64" y="92" width="4" height="16" fill="#0f172a" />
-              <rect x="76" y="92" width="8" height="4" fill="#0f172a" />
-              <rect x="52" y="112" width="12" height="4" fill="#0f172a" />
-              <rect x="72" y="112" width="16" height="4" fill="#0f172a" />
-              <rect x="48" y="124" width="8" height="4" fill="#0f172a" />
-              <rect x="64" y="124" width="12" height="4" fill="#0f172a" />
-              <rect x="84" y="124" width="4" height="8" fill="#0f172a" />
-              <rect x="116" y="48" width="4" height="12" fill="#0f172a" />
-              <rect x="124" y="48" width="8" height="4" fill="#0f172a" />
-              <rect x="116" y="68" width="12" height="4" fill="#0f172a" />
-              <rect x="120" y="80" width="4" height="12" fill="#0f172a" />
-              <rect x="128" y="80" width="4" height="8" fill="#0f172a" />
-              <rect x="120" y="104" width="12" height="8" fill="#0f172a" />
-              <rect x="124" y="120" width="8" height="4" fill="#0f172a" />
-            </svg>
+        {/* Real Vector SVG QR Code Container */}
+        <div className="flex flex-col items-center justify-center py-1">
+          <div className="w-52 h-52 p-3 bg-white rounded-2xl shadow-xl border border-zinc-200 flex items-center justify-center overflow-hidden">
+            {qrSvg ? (
+              <div
+                className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:block"
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-zinc-400 text-xs">
+                <RefreshCw size={24} className="animate-spin text-blue-500" />
+                <span>Generating QR...</span>
+              </div>
+            )}
           </div>
-          <span className="mt-2.5 text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
+
+          <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-2.5">
             <Wifi size={13} className="text-cyan-400" />
-            Connect phone to the same Wi-Fi and scan
-          </span>
-        </div>
-
-        {/* Copy URL Bar */}
-        <div className="mt-3 flex items-center gap-2 p-1.5 rounded-xl bg-black/40 border border-white/5">
-          <div className="flex-1 px-3 py-1 font-mono text-xs text-cyan-300 truncate tracking-wide">
-            {hostUrl}
+            <span>Connect smartphone to same Wi-Fi network</span>
           </div>
-          <button
-            onClick={handleCopy}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all duration-150 ${
-              copied
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            <span>{copied ? 'Copied!' : 'Copy'}</span>
-          </button>
         </div>
 
-        {/* Bottom Actions */}
-        <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between">
+        {/* Network IP Selector / Target Address */}
+        <div className="mt-3.5 flex flex-col gap-1.5">
+          {availableIps.length > 1 && (
+            <div className="flex items-center gap-1.5 mb-1 overflow-x-auto pb-1">
+              <span className="text-[10px] uppercase font-semibold text-zinc-500">Host IP:</span>
+              {availableIps.map((ip) => (
+                <button
+                  key={ip}
+                  onClick={() => setSelectedIp(ip)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-mono transition-all border ${
+                    selectedIp === ip
+                      ? 'bg-blue-600/30 border-blue-500/50 text-cyan-300 font-bold'
+                      : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                  }`}
+                >
+                  {ip === '127.0.0.1' ? '127.0.0.1 (Local)' : `${ip} (LAN)`}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <div className="flex-1 px-3 py-2 rounded-xl bg-black/40 border border-white/10 font-mono text-xs text-zinc-200 select-all truncate">
+              {fullUrl}
+            </div>
+            <button
+              onClick={handleCopy}
+              className={`px-3 py-2 rounded-xl border font-semibold text-xs transition-all flex items-center gap-1.5 shadow-sm ${
+                copied
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                  : 'border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white'
+              }`}
+              title="Copy URL to clipboard"
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              <span>{copied ? 'Copied!' : 'Copy'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Action Bar */}
+        <div className="mt-5 pt-3.5 border-t border-white/5 flex items-center justify-between">
           <button
             onClick={handleOpenBrowser}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold transition-all shadow-sm"
+            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs active:scale-95 transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/20"
           >
-            <ExternalLink size={14} />
+            <ExternalLink size={13} />
             <span>Open in Browser</span>
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 text-xs font-medium transition-colors"
+            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 font-semibold text-xs active:scale-95 transition-all"
           >
             Done
           </button>

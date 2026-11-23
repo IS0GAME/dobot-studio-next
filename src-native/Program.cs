@@ -145,6 +145,44 @@ namespace DobotStudioNext
             {
                 string rawUrl = context.Request.Url.AbsolutePath;
                 string relPath = rawUrl.TrimStart('/');
+
+                // API: Network Info for Mobile Pendant Auto-Discovery
+                if (relPath.Equals("api/network-info", StringComparison.OrdinalIgnoreCase) ||
+                    relPath.Equals("api/ip", StringComparison.OrdinalIgnoreCase))
+                {
+                    var ipList = new System.Collections.Generic.List<string>();
+                    foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                    {
+                        if (ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
+                        {
+                            foreach (var ip in ni.GetIPProperties().UnicastAddresses)
+                            {
+                                if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork &&
+                                    !IPAddress.IsLoopback(ip.Address) &&
+                                    !ip.Address.ToString().StartsWith("169."))
+                                {
+                                    ipList.Add(ip.Address.ToString());
+                                }
+                            }
+                        }
+                    }
+                    var sbIps = new StringBuilder();
+                    for (int i = 0; i < ipList.Count; i++)
+                    {
+                        if (i > 0) sbIps.Append(",");
+                        sbIps.Append("\"").Append(ipList[i]).Append("\"");
+                    }
+                    string defIp = ipList.Count > 0 ? ipList[0] : "127.0.0.1";
+                    string json = "{\"ips\":[" + sbIps.ToString() + "],\"defaultIp\":\"" + defIp + "\",\"port\":9876}";
+                    byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
+                    context.Response.ContentType = "application/json; charset=utf-8";
+                    context.Response.ContentLength64 = jsonBytes.Length;
+                    context.Response.StatusCode = 200;
+                    context.Response.KeepAlive = false;
+                    context.Response.OutputStream.Write(jsonBytes, 0, jsonBytes.Length);
+                    return;
+                }
+
                 if (string.IsNullOrEmpty(relPath)) relPath = "index.html";
 
                 string filePath = Path.Combine(distDirectory, relPath.Replace('/', Path.DirectorySeparatorChar));

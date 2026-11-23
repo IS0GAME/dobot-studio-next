@@ -47,6 +47,33 @@ export class MobilePendantServer {
           return new Response('WebSocket upgrade failed', { status: 400 });
         }
 
+        // Network Info API for Pendant pairing
+        if (url.pathname === '/api/network-info' || url.pathname === '/api/ip') {
+          const os = require('os');
+          const ifaces = os.networkInterfaces();
+          const ips: string[] = [];
+          for (const name of Object.keys(ifaces)) {
+            for (const net of ifaces[name] || []) {
+              if (net.family === 'IPv4' && !net.internal && !net.address.startsWith('169.')) {
+                ips.push(net.address);
+              }
+            }
+          }
+          return new Response(
+            JSON.stringify({
+              ips,
+              defaultIp: ips[0] || '127.0.0.1',
+              port: 9876,
+            }),
+            {
+              headers: {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Access-Control-Allow-Origin': '*',
+              },
+            }
+          );
+        }
+
         // Serve Mobile Pendant PWA HTML
         if (url.pathname === '/' || url.pathname === '/pendant') {
           return new Response(getMobilePendantHtml(), {
