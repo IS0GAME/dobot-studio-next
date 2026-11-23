@@ -6,3 +6,5 @@ src-tauri/target/
 extracted_pyc/
 .autosave/
 *.log
+*.exe
+*.dll
