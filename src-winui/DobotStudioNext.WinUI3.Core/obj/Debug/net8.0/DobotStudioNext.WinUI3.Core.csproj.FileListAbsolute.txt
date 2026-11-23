@@ -10,3 +10,4 @@ C:\Users\Administrator\.gemini\antigravity\scratch\dobot-studio-qol\src-winui\Do
 C:\Users\Administrator\.gemini\antigravity\scratch\dobot-studio-qol\src-winui\DobotStudioNext.WinUI3.Core\obj\Debug\net8.0\refint\DobotStudioNext.WinUI3.Core.dll
 C:\Users\Administrator\.gemini\antigravity\scratch\dobot-studio-qol\src-winui\DobotStudioNext.WinUI3.Core\obj\Debug\net8.0\DobotStudioNext.WinUI3.Core.pdb
 C:\Users\Administrator\.gemini\antigravity\scratch\dobot-studio-qol\src-winui\DobotStudioNext.WinUI3.Core\obj\Debug\net8.0\ref\DobotStudioNext.WinUI3.Core.dll
+C:\Users\Administrator\.gemini\antigravity\scratch\dobot-studio-qol\src-winui\DobotStudioNext.WinUI3.Core\obj\Debug\net8.0\DobotStudioNext.WinUI3.Core.csproj.AssemblyReference.cache
