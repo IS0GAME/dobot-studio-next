@@ -34,9 +34,9 @@
 | POWERTOYS-05 | Integrate PowerToys Layout in App Shell and Refine CSS | Completed | NavigationRail + expanded 52% 3D viewport + Mica glassmorphism + single-instance HttpListener fix (Commit 3de4f08) |
 | POWERTOYS-06 | Comprehensive Unit Test Suite Verification | Completed | 20 Bun unit tests pass (100%), 7 Cargo tests pass (100%), zero regressions |
 | POWERTOYS-07 | End-to-End Visual Verification via Windows MCP | Completed | Live visual verification captured: powertoys_fluent_live_verified.png and powertoys_pendant_modal_live_verified.png |
-| WINUI3-01 | Toolchain Bootstrapping & .NET 8 SDK Setup | Pending | Install Microsoft.DotNet.SDK.8 and verify dotnet CLI |
-| WINUI3-02 | Implement FormulaEngine with Plain Int Conversion | Pending | Recursive descent parser, variable dictionary, plain int output, TDD |
-| WINUI3-03 | Implement DobotSerialDriver & Virtual Simulator in C# | Pending | 0xAA protocol packet generator/parser, checksum, virtual simulator, TDD |
+| WINUI3-01 | Toolchain Bootstrapping & .NET 8 SDK Setup | Completed | Microsoft .NET SDK 8.0.428 verified working |
+| WINUI3-02 | Implement FormulaEngine with Plain Int Conversion | Completed | Recursive descent parser with BODMAS and plain int conversion (5 tests pass) |
+| WINUI3-03 | Implement DobotSerialDriver & Virtual Simulator in C# | In Progress | Implementing Dobot 0xAA protocol and analytical kinematics |
 | WINUI3-04 | Implement MotionSequence & Excel TSV Clipboard Interop | Pending | TSV clipboard format, .dobot.json and .playback XML serializer, TDD |
 | WINUI3-05 | Create WinUI 3 Unpackaged Desktop App Shell | Pending | WinUI 3 unpackaged project, Mica Alt backdrop, 48px NavigationRail |
 | WINUI3-06 | Implement Dedicated Variables Manager Page | Pending | Page to add, edit, delete parametric variables with reactive updates |

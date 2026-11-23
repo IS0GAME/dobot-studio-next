@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "DobotStudioNext.WinUI3.Core/1.0.0": {
+        "runtime": {
+          "DobotStudioNext.WinUI3.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "DobotStudioNext.WinUI3.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
