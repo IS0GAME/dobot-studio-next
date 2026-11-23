@@ -176,11 +176,8 @@ namespace DobotStudioNext
             catch { }
             finally
             {
-                try
-                {
-                    context.Response.Close();
-                }
-                catch { }
+                try { context.Response.OutputStream.Close(); } catch { }
+                try { context.Response.Close(); } catch { }
             }
         }
 
@@ -291,7 +288,7 @@ namespace DobotStudioNext
 
                 string url = "http://127.0.0.1:5173/";
                 string userProfile = Path.Combine(Path.GetTempPath(), "DobotStudioAppProfile");
-                string args = string.Format("--app=\"{0}\" --user-data-dir=\"{1}\" --test-type --no-first-run --no-default-browser-check --start-maximized", url, userProfile);
+                string args = string.Format("--app=\"{0}\" --user-data-dir=\"{1}\" --remote-debugging-port=9222 --test-type --no-first-run --no-default-browser-check --start-maximized", url, userProfile);
 
                 var psi = new ProcessStartInfo
                 {

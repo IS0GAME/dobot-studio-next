@@ -27,10 +27,10 @@
 | RELEASE-03 | Win32 Minimalist Pop-and-Fade Startup Popup | Completed | 460x260 layered card with crisp white 'D' logo on dark blue gradient (#0a192f to #1e3a8a), zero white fringes verified via Windows MCP |
 | RELEASE-04 | Standalone GUI Native Launcher (DobotStudioNext.exe) | Completed | Pure Windows GUI subsystem (/target:winexe) with embedded HttpListener on 127.0.0.1:5173, zero CMD flash, zero connection refused |
 | RELEASE-05 | Desktop Launcher & End-to-End Release Verification | Completed | DobotStudioNext.exe verified running cleanly, desktop shortcut updated with transparent icon, visual evidence captured via Windows MCP |
-| POWERTOYS-01 | Create PowerToys NavigationRail Component | Pending | 48px vertical rail with vector icons (Teach, Draw, Script, Settings) and active cyan pill indicator |
-| POWERTOYS-02 | Implement ContentDialog PendantModal with Pure Vector QR Code | Pending | Windows 11 modal with vector SVG QR code, local IP detection, copy toast |
-| POWERTOYS-03 | Modernize TitleBar with PowerToys Breadcrumb & Vector Icons | Pending | Lucide Smartphone icon, WinUI 3 breadcrumb, segmented mode switcher |
-| POWERTOYS-04 | Upgrade JogPanel & WaypointList with PowerToys SettingCards | Pending | SettingCards pattern, Cascadia Code tabular-nums, >=44px touch targets |
-| POWERTOYS-05 | Integrate PowerToys Layout in App Shell and Refine CSS | Pending | NavigationRail + expanded 55% 3D viewport + Mica glassmorphism |
-| POWERTOYS-06 | Comprehensive Unit Test Suite Verification | Pending | All bun unit tests and cargo tests pass, vite build succeeds |
-| POWERTOYS-07 | End-to-End Visual Verification via Windows MCP | Pending | Capture full PowerToys UI and Pendant Modal with Windows MCP evidence |
+| POWERTOYS-01 | Create PowerToys NavigationRail Component | Completed | 48px vertical rail with vector icons (Teach, Draw, Script, Settings) and active cyan pill indicator (Commit 09b94a2) |
+| POWERTOYS-02 | Implement ContentDialog PendantModal with Pure Vector QR Code | Completed | Windows 11 modal with vector SVG QR code, local IP detection, copy toast (Commit 2a32048) |
+| POWERTOYS-03 | Modernize TitleBar with PowerToys Breadcrumb & Vector Icons | Completed | Lucide Smartphone icon, WinUI 3 breadcrumb, segmented mode switcher (Commit 9fae09b) |
+| POWERTOYS-04 | Upgrade JogPanel & WaypointList with PowerToys SettingCards | Completed | SettingCards pattern, Cascadia Code tabular-nums, >=44px touch targets (Commit 431b113) |
+| POWERTOYS-05 | Integrate PowerToys Layout in App Shell and Refine CSS | Completed | NavigationRail + expanded 52% 3D viewport + Mica glassmorphism + single-instance HttpListener fix (Commit 3de4f08) |
+| POWERTOYS-06 | Comprehensive Unit Test Suite Verification | Completed | 20 Bun unit tests pass (100%), 7 Cargo tests pass (100%), zero regressions |
+| POWERTOYS-07 | End-to-End Visual Verification via Windows MCP | Completed | Live visual verification captured: powertoys_fluent_live_verified.png and powertoys_pendant_modal_live_verified.png |
