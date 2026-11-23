@@ -37,6 +37,9 @@ namespace DobotStudioNext
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern int GetWindowTextLength(IntPtr hWnd);
 
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
         private static HttpListener staticListener;
         private static Thread serverThread;
         private static bool isServerRunning = false;
@@ -49,24 +52,40 @@ namespace DobotStudioNext
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            string rootDir = AppDomain.CurrentDomain.BaseDirectory;
-            distDirectory = Path.Combine(rootDir, "dist");
-            if (!Directory.Exists(distDirectory))
+            bool createdNew;
+            using (var mutex = new Mutex(true, "DobotStudioNext_SingleInstance_Mutex_v2", out createdNew))
             {
-                distDirectory = rootDir;
+                if (!createdNew)
+                {
+                    // Instance already running - focus it and exit gracefully
+                    IntPtr existingHwnd = FindDobotAppWindow();
+                    if (existingHwnd != IntPtr.Zero)
+                    {
+                        SetForegroundWindow(existingHwnd);
+                        BringWindowToTop(existingHwnd);
+                    }
+                    return;
+                }
+
+                string rootDir = AppDomain.CurrentDomain.BaseDirectory;
+                distDirectory = Path.Combine(rootDir, "dist");
+                if (!Directory.Exists(distDirectory))
+                {
+                    distDirectory = rootDir;
+                }
+
+                // 1. Start Embedded In-Process Static Server on Port 5173
+                StartEmbeddedServer();
+
+                // 2. Start Silent Mobile Pendant Service (Port 9876) if available
+                StartPendantService(rootDir);
+
+                // 3. Show Smooth Minimalist Splash Popup (White 'D' on Dark Blue Gradient)
+                ShowSplashPopup();
+
+                // 4. Launch Dedicated Native App Window (Edge App Mode) and keep server alive until closed
+                LaunchAppWindow();
             }
-
-            // 1. Start Embedded In-Process Static Server on Port 5173
-            StartEmbeddedServer();
-
-            // 2. Start Silent Mobile Pendant Service (Port 9876) if available
-            StartPendantService(rootDir);
-
-            // 3. Show Smooth Minimalist Splash Popup (White 'D' on Dark Blue Gradient)
-            ShowSplashPopup();
-
-            // 4. Launch Dedicated Native App Window (Edge App Mode) and keep server alive while window exists
-            LaunchAppWindow();
         }
 
         static void StartEmbeddedServer()
@@ -78,18 +97,30 @@ namespace DobotStudioNext
                 staticListener.Prefixes.Add("http://localhost:5173/");
                 staticListener.Start();
                 isServerRunning = true;
-
-                serverThread = new Thread(ServerWorker)
-                {
-                    IsBackground = true,
-                    Name = "DobotStaticHttpServer"
-                };
-                serverThread.Start();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Trace.WriteLine("HttpListener: " + ex.Message);
+                // Fallback: try binding loopback only
+                try
+                {
+                    staticListener = new HttpListener();
+                    staticListener.Prefixes.Add("http://127.0.0.1:5173/");
+                    staticListener.Start();
+                    isServerRunning = true;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine("Static server error: " + ex.Message);
+                    return;
+                }
             }
+
+            serverThread = new Thread(ServerWorker)
+            {
+                IsBackground = true,
+                Name = "DobotStaticHttpServer"
+            };
+            serverThread.Start();
         }
 
         static void ServerWorker()
@@ -130,7 +161,12 @@ namespace DobotStudioNext
                     context.Response.ContentType = GetMimeType(Path.GetExtension(filePath));
                     context.Response.ContentLength64 = bytes.Length;
                     context.Response.StatusCode = 200;
-                    context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+                    context.Response.KeepAlive = false;
+
+                    if (!string.Equals(context.Request.HttpMethod, "HEAD", StringComparison.OrdinalIgnoreCase))
+                    {
+                        context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+                    }
                 }
                 else
                 {
@@ -140,7 +176,11 @@ namespace DobotStudioNext
             catch { }
             finally
             {
-                try { context.Response.OutputStream.Close(); } catch { }
+                try
+                {
+                    context.Response.Close();
+                }
+                catch { }
             }
         }
 
@@ -157,6 +197,7 @@ namespace DobotStudioNext
                 case ".ico": return "image/x-icon";
                 case ".json": return "application/json";
                 case ".wasm": return "application/wasm";
+                case ".map": return "application/json";
                 default: return "application/octet-stream";
             }
         }
@@ -191,7 +232,7 @@ namespace DobotStudioNext
                 SetForegroundWindow(splash.Handle);
                 BringWindowToTop(splash.Handle);
 
-                // Wait 1.2 seconds for smooth brand popup display
+                // Display brand splash for 1.2 seconds
                 var sw = Stopwatch.StartNew();
                 while (sw.ElapsedMilliseconds < 1200)
                 {
@@ -199,7 +240,7 @@ namespace DobotStudioNext
                     Thread.Sleep(15);
                 }
 
-                // Smooth 200ms fade-out
+                // Smooth fade-out
                 for (double op = 1.0; op >= 0.05; op -= 0.1)
                 {
                     splash.Opacity = op;
@@ -210,22 +251,27 @@ namespace DobotStudioNext
             }
         }
 
-        static IntPtr FindDobotWindow()
+        static IntPtr FindDobotAppWindow()
         {
             IntPtr found = IntPtr.Zero;
             EnumWindows((hWnd, lParam) =>
             {
-                int len = GetWindowTextLength(hWnd);
-                if (len > 0)
+                StringBuilder sbClass = new StringBuilder(256);
+                GetClassName(hWnd, sbClass, sbClass.Capacity);
+                if (sbClass.ToString() == "Chrome_WidgetWin_1")
                 {
-                    StringBuilder sb = new StringBuilder(len + 1);
-                    GetWindowText(hWnd, sb, sb.Capacity);
-                    string title = sb.ToString();
-                    if (title.IndexOf("Dobot", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        title.IndexOf("5173", StringComparison.OrdinalIgnoreCase) >= 0)
+                    int len = GetWindowTextLength(hWnd);
+                    if (len > 0)
                     {
-                        found = hWnd;
-                        return false; // stop enumeration
+                        StringBuilder sbTitle = new StringBuilder(len + 1);
+                        GetWindowText(hWnd, sbTitle, sbTitle.Capacity);
+                        string title = sbTitle.ToString();
+                        if (title.IndexOf("Dobot Studio", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            title.IndexOf("5173", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            found = hWnd;
+                            return false;
+                        }
                     }
                 }
                 return true;
@@ -254,39 +300,23 @@ namespace DobotStudioNext
                     UseShellExecute = false
                 };
 
-                Process.Start(psi);
-
-                // Wait for the Edge app window to appear (matches "5173" or "Dobot")
-                IntPtr targetHwnd = IntPtr.Zero;
-                for (int i = 0; i < 60; i++)
+                Process edgeProc = Process.Start(psi);
+                if (edgeProc != null)
                 {
-                    Thread.Sleep(200);
-                    targetHwnd = FindDobotWindow();
-                    if (targetHwnd != IntPtr.Zero) break;
+                    try
+                    {
+                        edgeProc.WaitForExit();
+                    }
+                    catch { }
                 }
 
+                // If edgeProc exited prematurely, double check if window is still alive
+                IntPtr targetHwnd = FindDobotAppWindow();
                 if (targetHwnd != IntPtr.Zero)
                 {
-                    SetForegroundWindow(targetHwnd);
-                    BringWindowToTop(targetHwnd);
-
                     while (IsWindow(targetHwnd))
                     {
-                        Thread.Sleep(300);
-                    }
-                }
-                else
-                {
-                    // Fallback: stay alive so user can browse
-                    while (true)
-                    {
-                        Thread.Sleep(1000);
-                        targetHwnd = FindDobotWindow();
-                        if (targetHwnd != IntPtr.Zero)
-                        {
-                            while (IsWindow(targetHwnd)) Thread.Sleep(300);
-                            break;
-                        }
+                        Thread.Sleep(500);
                     }
                 }
             }
