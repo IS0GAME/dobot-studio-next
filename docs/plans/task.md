@@ -22,3 +22,8 @@
 | PLAN-09 | Waypoint Management, History & Sequence Timeline | Completed | WaypointList, "โหมดการใช้งาน" per point, pause time, reorder |
 | PLAN-10 | File Management & Dobot Studio 1.9.4 Legacy Interop | Completed | 2-way .playback XML converter & Python exporter passing |
 | PLAN-11 | Production Verification & Release Packaging | Completed | All 12 TypeScript unit tests passing, all 5 Rust integration tests passing, desktop launcher deployed |
+| RELEASE-01 | Skeleton Loading UI Component & Shimmer Animations | Pending | src/components/SkeletonView.tsx and CSS shimmer keyframes |
+| RELEASE-02 | Production Bundle Compilation & Asset Packaging | Pending | vite production build outputting standalone dist/ assets |
+| RELEASE-03 | Win32 Minimalist Pop-and-Fade Startup Popup | Pending | 460x260 layered card with vector icon, 1.2s smooth timer |
+| RELEASE-04 | Standalone GUI Native Launcher (DobotStudioNext.exe) | Pending | Pure Windows GUI subsystem (#![windows_subsystem = "windows"]) |
+| RELEASE-05 | Desktop Launcher & End-to-End Release Verification | Pending | Zero-console launch verified, Desktop shortcut updated |
