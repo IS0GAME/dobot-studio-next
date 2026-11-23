@@ -37,8 +37,8 @@
 | WINUI3-01 | Toolchain Bootstrapping & .NET 8 SDK Setup | Completed | Microsoft .NET SDK 8.0.428 verified working |
 | WINUI3-02 | Implement FormulaEngine with Plain Int Conversion | Completed | Recursive descent parser with BODMAS and plain int conversion (5 tests pass) |
 | WINUI3-03 | Implement DobotSerialDriver & Virtual Simulator in C# | Completed | 0xAA protocol packet generator/parser, checksum, virtual simulator (8 tests pass) |
-| WINUI3-04 | Implement MotionSequence & Excel TSV Clipboard Interop | In Progress | MotionPoint model with Formula Inspector link, TSV and JSON/XML storage |
-| WINUI3-05 | Create WinUI 3 Unpackaged Desktop App Shell | Pending | WinUI 3 unpackaged project, Mica Alt backdrop, 48px NavigationRail |
+| WINUI3-04 | Implement MotionSequence & Excel TSV Clipboard Interop | Completed | MotionPoint formula binding, TSV copy/paste, .dobot.json & .playback XML (12 tests pass) |
+| WINUI3-05 | Create WinUI 3 Unpackaged Desktop App Shell | In Progress | Setting up Windows App SDK unpackaged project with Mica Alt |
 | WINUI3-06 | Implement Dedicated Variables Manager Page | Pending | Page to add, edit, delete parametric variables with reactive updates |
 | WINUI3-07 | Implement Excel DataGrid with Formula Inspector | Pending | Spreadsheet table, keyboard navigation (Tab/Enter), formula tooltip |
 | WINUI3-08 | Implement StepRunner Visual Debugger & Teach Shortcuts | Pending | F10 step next, F5 run, Esc E-STOP, Ctrl+T teach append/overwrite |

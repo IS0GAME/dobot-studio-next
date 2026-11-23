@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DobotStudioNext.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a635b47d259fe2cdb00e6e0805cbc693c7dc9263")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a9d1018eb620c6c81c4e5b554241dac93899ef0d")]
 [assembly: System.Reflection.AssemblyProductAttribute("DobotStudioNext.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DobotStudioNext.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
