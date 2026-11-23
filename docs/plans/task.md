@@ -23,7 +23,14 @@
 | PLAN-10 | File Management & Dobot Studio 1.9.4 Legacy Interop | Completed | 2-way .playback XML converter & Python exporter passing |
 | PLAN-11 | Production Verification & Release Packaging | Completed | All 12 TypeScript unit tests passing, all 5 Rust integration tests passing, desktop launcher deployed |
 | RELEASE-01 | Skeleton Loading UI Component & Shimmer Animations | Completed | src/components/SkeletonView.tsx and CSS shimmer keyframes verified (2 tests pass) |
-| RELEASE-02 | Production Bundle Compilation & Asset Packaging | Completed | vite production build outputting standalone dist/ assets in 3.17s |
-| RELEASE-03 | Win32 Minimalist Pop-and-Fade Startup Popup | Completed | 460x260 layered card with vector icon, 1.2s smooth timer, 7/7 Rust tests pass |
-| RELEASE-04 | Standalone GUI Native Launcher (DobotStudioNext.exe) | Completed | Pure Windows GUI subsystem compiled (227 KB PE binary, zero console window) |
-| RELEASE-05 | Desktop Launcher & End-to-End Release Verification | Completed | DobotStudioNext.exe verified running cleanly at PID 11292, desktop shortcut updated |
+| RELEASE-02 | Production Bundle Compilation & Asset Packaging | Completed | vite production build outputting standalone dist/ assets with full Tailwind CSS (16.92kB) |
+| RELEASE-03 | Win32 Minimalist Pop-and-Fade Startup Popup | Completed | 460x260 layered card with crisp white 'D' logo on dark blue gradient (#0a192f to #1e3a8a), zero white fringes verified via Windows MCP |
+| RELEASE-04 | Standalone GUI Native Launcher (DobotStudioNext.exe) | Completed | Pure Windows GUI subsystem (/target:winexe) with embedded HttpListener on 127.0.0.1:5173, zero CMD flash, zero connection refused |
+| RELEASE-05 | Desktop Launcher & End-to-End Release Verification | Completed | DobotStudioNext.exe verified running cleanly, desktop shortcut updated with transparent icon, visual evidence captured via Windows MCP |
+| POWERTOYS-01 | Create PowerToys NavigationRail Component | Pending | 48px vertical rail with vector icons (Teach, Draw, Script, Settings) and active cyan pill indicator |
+| POWERTOYS-02 | Implement ContentDialog PendantModal with Pure Vector QR Code | Pending | Windows 11 modal with vector SVG QR code, local IP detection, copy toast |
+| POWERTOYS-03 | Modernize TitleBar with PowerToys Breadcrumb & Vector Icons | Pending | Lucide Smartphone icon, WinUI 3 breadcrumb, segmented mode switcher |
+| POWERTOYS-04 | Upgrade JogPanel & WaypointList with PowerToys SettingCards | Pending | SettingCards pattern, Cascadia Code tabular-nums, >=44px touch targets |
+| POWERTOYS-05 | Integrate PowerToys Layout in App Shell and Refine CSS | Pending | NavigationRail + expanded 55% 3D viewport + Mica glassmorphism |
+| POWERTOYS-06 | Comprehensive Unit Test Suite Verification | Pending | All bun unit tests and cargo tests pass, vite build succeeds |
+| POWERTOYS-07 | End-to-End Visual Verification via Windows MCP | Pending | Capture full PowerToys UI and Pendant Modal with Windows MCP evidence |
